@@ -1,0 +1,47 @@
+{
+  "name": "near-lands",
+  "version": "0.1.0",
+  "description": "NEAR Lands",
+  "scripts": {
+    "prebuild": "rm -rf dist/* .parcel-cache",
+    "build": "parcel build index.html --dist-dir dist/",
+    "postbuild": "cp -R static/* dist/",
+    "start": "parcel index.html",
+    "build:contract": "cd contract && npm run build:release",
+    "build:contract:debug": "cd contract && npm run build:debug",
+    "dev:deploy:contract": "near dev-deploy --wasmFile contract/build/debug/lands.wasm",
+    "deploy:contract": "near deploy --wasmFile contract/build/release/lands.wasm --accountId lands.near",
+    "deploy:static": "npm run build && rm -f dist/*.map && node scripts/static-deploy.js",
+    "deploy": "npm run build:contract && npm run deploy:contract"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vgrichina/near-lands.git"
+  },
+  "author": "Vlad Grichina <vgrichina@gmail.com>",
+  "license": "MIT",
+  "licenseUrl": "http://www.opensource.org/licenses/mit-license.php",
+  "bugs": {
+    "url": "https://github.com/vgrichina/near-lands/issues"
+  },
+  "homepage": "https://lands.near.page",
+  "devDependencies": {
+    "@parcel/transformer-image": "2.0.0-beta.2",
+    "ipfs-deploy": "^11.1.0",
+    "parcel": "^2.0.0-beta.2",
+    "web4-near": "^0.0.1"
+  },
+  "dependencies": {
+    "agora-rtc-sdk-ng": "^4.6.3",
+    "fetch-send-json": "^0.0.2",
+    "near-api-js": "^0.42.0",
+    "noble-ed25519": "^1.2.5",
+    "phaser": "^3.50.0",
+    "phaser3-rex-plugins": "^1.1.53",
+    "regenerator-runtime": "^0.13.7",
+    "serve-static": "^1.14.1",
+    "signalhub": "^4.9.0",
+    "simple-peer": "^9.11.0",
+    "webrtc-swarm": "https://github.com/vgrichina/webrtc-swarm.git"
+  }
+}
