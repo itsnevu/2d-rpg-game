@@ -6,7 +6,7 @@
     "prebuild": "rm -rf dist/* .parcel-cache",
     "build": "parcel build index.html --dist-dir dist/",
     "postbuild": "cp -R static/* dist/",
-    "start": "parcel index.html",
+    "start": "NODE_ENV=production parcel index.html",
     "build:contract": "cd contract && npm run build:release",
     "build:contract:debug": "cd contract && npm run build:debug",
     "dev:deploy:contract": "near dev-deploy --wasmFile contract/build/debug/lands.wasm",
