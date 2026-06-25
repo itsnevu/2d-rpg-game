@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 
 import * as voiceChat from './audio-chat';
+import { getSolanaPubkey } from './solana';
 
 export class UIScene extends Phaser.Scene {
     constructor() {
@@ -27,7 +28,7 @@ export class UIScene extends Phaser.Scene {
             this.loginButton.destroy();
             this.loginButton = null;
         }
-        if (walletConnection.isSignedIn()) {
+        if (getSolanaPubkey()) {
             this.logoutButton = this.createButton('Logout', 'logout');
             this.logoutButton.setScrollFactor(0);
             this.logoutButton.setDepth(Number.MAX_VALUE);
@@ -37,7 +38,7 @@ export class UIScene extends Phaser.Scene {
             this.logoutButton.x = width - 10 - this.logoutButton.width;
             this.logoutButton.y = 10;
         } else {
-            this.loginButton = this.createButton('Login with NEAR', 'login');
+            this.loginButton = this.createButton('Login with Solana', 'login');
             this.loginButton.setScrollFactor(0);
             this.loginButton.setDepth(Number.MAX_VALUE);
             this.loginButton.on('pointerup', () => {
@@ -67,7 +68,7 @@ export class UIScene extends Phaser.Scene {
         if (this.toggleAudioButton) {
             this.toggleAudioButton.destroy();
         }
-        if (walletConnection.isSignedIn()) {
+        if (getSolanaPubkey()) {
             this.toggleMicButton = this.createButton(getToggleMicButtonText(), 'unmute');
             this.toggleMicButton.on('pointerup', async () => {
                 if (voiceChat.isMicEnabled()) {
@@ -115,27 +116,57 @@ export class UIScene extends Phaser.Scene {
 
         if (this.modeButtons) {
             this.modeButtons.destroy();
+            this.modeButtons = null;
         }
-        this.modeButtons = this.rexUI.add.buttons({
-            orientation: 'x',
-            buttons: [
-                this.createButton('Walk', 'walk'),
-                this.createButton('Build', 'build')
-            ],
-            type: 'radio',
-            setValueCallback: (button, value) => {
-                button
-                    .setAlpha(value ? 0.75 : 0.5);
-            },
-            space: { item: 8 }
-        }).layout();
-        this.modeButtons.value = 'walk';
-        this.modeButtons.x = Math.floor(width / 2);
-        this.modeButtons.y = 30;
+        if (this.spectatorLabel) {
+            this.spectatorLabel.destroy();
+            this.spectatorLabel = null;
+        }
+
+        if (window.isSpectator) {
+            this.spectatorLabel = this.add.text(0, 0, 'SPECTATOR MODE', {
+                fontFamily: 'PixelOperatorMono-Bold',
+                fontSize: '22px',
+                padding: { x: 16, y: 8 },
+                backgroundColor: 'rgba(92, 58, 33, 0.85)',
+                color: '#ffffff',
+                stroke: '#5c3a21',
+                strokeThickness: 3
+            });
+            this.spectatorLabel.setScrollFactor(0);
+            this.spectatorLabel.setDepth(Number.MAX_VALUE);
+            this.spectatorLabel.x = Math.floor((width - this.spectatorLabel.width) / 2);
+            this.spectatorLabel.y = 20;
+        } else {
+            this.modeButtons = this.rexUI.add.buttons({
+                orientation: 'x',
+                buttons: [
+                    this.createButton('Walk', 'walk'),
+                    this.createButton('Build', 'build')
+                ],
+                type: 'radio',
+                setValueCallback: (button, value) => {
+                    button
+                        .setAlpha(value ? 0.75 : 0.5);
+                },
+                space: { item: 8 }
+            }).layout();
+            this.modeButtons.value = 'walk';
+            this.modeButtons.x = Math.floor(width / 2);
+            this.modeButtons.y = 30;
+        }
 
         const isTouchDevice = navigator.maxTouchPoints > 0;
         if (!isTouchDevice) {
-            this.help = this.add.text(16, 16, 'Left-click to paint.\nShift + Left-click to select tile.\nArrows to scroll. Digits to switch tiles.', {
+            if (this.help) {
+                this.help.destroy();
+            }
+
+            const helpText = window.isSpectator 
+                ? 'SPECTATOR MODE\nUse Arrows or WASD to explore the map.\nWatch players build in real-time.'
+                : 'Left-click to paint.\nShift + Left-click to select tile.\nArrows to scroll. Digits to switch tiles.';
+
+            this.help = this.add.text(16, 16, helpText, {
                 fontFamily: 'PixelOperatorMono',
                 fontSize: '18px',
                 padding: { x: 12, y: 8 },
