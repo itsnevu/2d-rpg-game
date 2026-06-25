@@ -3,8 +3,189 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NEAR Lands</title>
+    <!-- Custom Fonts -->
+    <style>
+      @font-face {
+        font-family: 'KiwiSoda';
+        src: url('/font/KiwiSoda.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'PixelOperator';
+        src: url('/font/PixelOperator.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'PixelOperator-Bold';
+        src: url('/font/PixelOperator-Bold.ttf') format('truetype');
+        font-weight: bold;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'PixelOperatorMono';
+        src: url('/font/PixelOperatorMono.ttf') format('truetype');
+        font-weight: normal;
+        font-style: normal;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: 'PixelOperatorMono-Bold';
+        src: url('/font/PixelOperatorMono-Bold.ttf') format('truetype');
+        font-weight: bold;
+        font-style: normal;
+        font-display: swap;
+      }
+
+      /* Styles for Landing Page Overlay */
+      #landing-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: linear-gradient(135deg, #e5ddb3 0%, #d8cc96 50%, #c3b57d 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        overflow: hidden;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+      }
+
+      #landing-screen.fade-out {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      /* Animated grid background */
+      .grid-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-image: 
+          linear-gradient(rgba(92, 58, 33, 0.12) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(92, 58, 33, 0.12) 1px, transparent 1px),
+          linear-gradient(rgba(92, 58, 33, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(92, 58, 33, 0.05) 1px, transparent 1px);
+        background-size: 50px 50px, 50px 50px, 10px 10px, 10px 10px;
+        opacity: 0.8;
+        pointer-events: none;
+      }
+
+      .menu-card {
+        background: linear-gradient(145deg, #f0e6b5, #e0d5a3);
+        border: 4px solid #5c3a21;
+        border-radius: 0px;
+        padding: 45px 40px;
+        min-width: 320px;
+        max-width: 450px;
+        width: 90%;
+        box-shadow: 0 8px 0 #8b6e4e, 0 0 20px rgba(0, 0, 0, 0.15);
+        position: relative;
+        text-align: center;
+        z-index: 10;
+      }
+
+      .game-title {
+        font-family: 'KiwiSoda', sans-serif;
+        font-size: 48px;
+        color: #5c3a21;
+        margin: 0 0 10px 0;
+        letter-spacing: 2px;
+        text-shadow: 2px 2px 0px rgba(255,255,255,0.6);
+      }
+
+      .game-subtitle {
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 18px;
+        color: #8b6e4e;
+        margin: 0 0 35px 0;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      .account-info {
+        font-family: 'PixelOperatorMono', monospace;
+        font-size: 16px;
+        color: #5c3a21;
+        background: rgba(92, 58, 33, 0.08);
+        border: 2px dashed #5c3a21;
+        padding: 12px;
+        margin-bottom: 25px;
+        word-break: break-all;
+      }
+
+      .menu-button {
+        display: block;
+        width: 100%;
+        background: linear-gradient(135deg, #a77d54, #866043);
+        color: #ffffff;
+        border: 3px solid #5c3a21;
+        border-radius: 0px;
+        padding: 14px 20px;
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2), 0 4px 0 rgba(0,0,0,0.1);
+        text-shadow: 1px 1px 0px rgba(0,0,0,0.4);
+        margin-bottom: 15px;
+        box-sizing: border-box;
+      }
+
+      .menu-button:hover {
+        background: linear-gradient(135deg, #b88d63, #977154);
+        border-color: #86be52;
+        transform: translateY(-2px);
+      }
+
+      .menu-button:active {
+        transform: translateY(1px);
+        box-shadow: inset 0 -2px 0 rgba(0,0,0,0.2);
+      }
+
+      .menu-button.secondary {
+        background: linear-gradient(135deg, #8c8c8c, #6c6c6c);
+      }
+
+      .menu-button.secondary:hover {
+        background: linear-gradient(135deg, #9c9c9c, #7c7c7c);
+      }
+
+      .footer-note {
+        font-family: 'PixelOperatorMono', monospace;
+        font-size: 14px;
+        color: #8b6e4e;
+        margin-top: 25px;
+      }
+    </style>
   </head>
-  <body style="margin: 0;">
+  <body style="margin: 0; background-color: #2d2d2d;">
+    <!-- Landing Screen / Main Menu Overlay -->
+    <div id="landing-screen">
+      <div class="grid-background"></div>
+      <div class="menu-card">
+        <h1 class="game-title">NEAR LANDS</h1>
+        <div class="game-subtitle">2D Multiplayer RPG</div>
+
+        <div id="auth-section">
+          <!-- Dynamically populated via JS -->
+          <div style="font-family: 'PixelOperatorMono', monospace; color: #5c3a21;">Connecting to NEAR...</div>
+        </div>
+
+        <div class="footer-note">Survive. Build. Explore.</div>
+      </div>
+    </div>
+
     <div id="phaser-example"></div>
     <script src="src/index.js"></script>
   </body>

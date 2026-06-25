@@ -98,14 +98,18 @@ export class UIScene extends Phaser.Scene {
             this.messageLabel.destroy();
         }
         this.messageLabel = this.add.text(0, 0, 'Pending ...', {
-            fontSize: '14px',
+            fontFamily: 'PixelOperatorMono',
+            fontSize: '18px',
             padding: { x: 10, y: 5 },
-            backgroundColor: '#000000',
+            backgroundColor: 'rgba(92, 58, 33, 0.85)',
+            color: '#ffffff',
+            stroke: '#5c3a21',
+            strokeThickness: 2,
             metrics: { ascent: 12, descent: 4, fontSize: 16 }
         });
         this.messageLabel.setScrollFactor(0);
         this.messageLabel.setDepth(Number.MAX_VALUE);
-        this.messageLabel.setAlpha(0.75);
+        this.messageLabel.setAlpha(0.85);
         this.messageLabel.x = Math.floor((width - this.messageLabel.width) / 2);
         this.messageLabel.y = height - 10 - this.messageLabel.height;
 
@@ -131,20 +135,19 @@ export class UIScene extends Phaser.Scene {
 
         const isTouchDevice = navigator.maxTouchPoints > 0;
         if (!isTouchDevice) {
-            if (this.help) {
-                this.help.destroy();
-            }
-
             this.help = this.add.text(16, 16, 'Left-click to paint.\nShift + Left-click to select tile.\nArrows to scroll. Digits to switch tiles.', {
-                fontSize: '14px',
-                padding: { x: 10, y: 5 },
-                backgroundColor: '#000000',
+                fontFamily: 'PixelOperatorMono',
+                fontSize: '18px',
+                padding: { x: 12, y: 8 },
+                backgroundColor: 'rgba(92, 58, 33, 0.85)',
                 fill: '#ffffff',
+                stroke: '#5c3a21',
+                strokeThickness: 2,
                 metrics: { ascent: 12, descent: 4, fontSize: 16 }
             });
             this.help.setScrollFactor(0);
             this.help.setDepth(Number.MAX_VALUE);
-            this.help.setAlpha(0.75);
+            this.help.setAlpha(0.9);
         }
 
         if (isTouchDevice) {
@@ -174,14 +177,27 @@ export class UIScene extends Phaser.Scene {
 
     createButton(text, name) {
         const button = this.add.text(0, 0, text, {
-            fontSize: '16px',
-            padding: { x: 10, y: 5 },
-            backgroundColor: '#000000',
+            fontFamily: 'PixelOperatorMono-Bold',
+            fontSize: '20px',
+            padding: { x: 14, y: 8 },
+            backgroundColor: '#866043',
+            color: '#ffffff',
+            stroke: '#5c3a21',
+            strokeThickness: 3,
             metrics: { ascent: 13, descent: 4, fontSize: 17 }
         });
         button.name = name;
-        button.setAlpha(0.75);
+        button.setAlpha(0.95);
         button.setInteractive({ useHandCursor: true });
+
+        button.on('pointerover', () => {
+            button.setBackgroundColor('#a77d54');
+            button.setStroke('#86be52');
+        });
+        button.on('pointerout', () => {
+            button.setBackgroundColor('#866043');
+            button.setStroke('#5c3a21');
+        });
         return button;
     }
 
@@ -206,14 +222,17 @@ export class UIScene extends Phaser.Scene {
             this.errorLabel.destroy();
         }
         this.errorLabel = this.add.text(0, 0, `Last error: ${e}`, {
-            fontSize: '14px',
-            padding: { x: 10, y: 5 },
-            backgroundColor: '#000000',
-            fill: '#f00'
+            fontFamily: 'PixelOperatorMono-Bold',
+            fontSize: '18px',
+            padding: { x: 12, y: 8 },
+            backgroundColor: 'rgba(167, 84, 84, 0.9)',
+            fill: '#ffffff',
+            stroke: '#5c3a21',
+            strokeThickness: 2
         });
         this.errorLabel.setScrollFactor(0);
         this.errorLabel.setDepth(Number.MAX_VALUE);
-        this.errorLabel.setAlpha(0.75);
+        this.errorLabel.setAlpha(0.9);
         this.errorLabel.x = Math.floor((width - this.errorLabel.width) / 2);
         this.errorLabel.y = this.messageLabel.y - 10 - this.errorLabel.height;
     }

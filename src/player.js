@@ -161,9 +161,12 @@ export class Player extends Phaser.GameObjects.Container {
             ? `guest:${accountId.split(':')[1].substring(0, 6)}`
             : accountId;
         const nameText = scene.add.text(0, 0, displayedAccountId, {
-            fontSize: 16,
-            fontFamily: 'sans-serif',
-            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            fontSize: '14px',
+            fontFamily: 'PixelOperator',
+            backgroundColor: 'rgba(92, 58, 33, 0.85)',
+            color: '#ffffff',
+            stroke: '#5c3a21',
+            strokeThickness: 2,
             padding: {
                 left: 8,
                 right: 8,

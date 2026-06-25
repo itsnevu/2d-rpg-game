@@ -682,6 +682,37 @@ publishLocation();
     p2p.subscribeToLocation(onLocationUpdate);
 
     const { walletConnection } = await connectPromise;
+    
+    // Setup landing page UI with wallet connection state
+    const authSection = document.getElementById('auth-section');
+    if (authSection) {
+        if (walletConnection.isSignedIn()) {
+            const accountId = walletConnection.getAccountId();
+            authSection.innerHTML = `
+                <div class="account-info">Logged in: <strong>${accountId}</strong></div>
+                <button class="menu-button" id="btn-play">ENTER GAME</button>
+                <button class="menu-button secondary" id="btn-logout">LOGOUT</button>
+            `;
+            document.getElementById('btn-play').addEventListener('click', () => {
+                document.getElementById('landing-screen').classList.add('fade-out');
+            });
+            document.getElementById('btn-logout').addEventListener('click', () => {
+                logout();
+            });
+        } else {
+            authSection.innerHTML = `
+                <button class="menu-button" id="btn-login">LOGIN WITH NEAR</button>
+                <button class="menu-button secondary" id="btn-guest">PLAY AS GUEST</button>
+            `;
+            document.getElementById('btn-login').addEventListener('click', () => {
+                login();
+            });
+            document.getElementById('btn-guest').addEventListener('click', () => {
+                document.getElementById('landing-screen').classList.add('fade-out');
+            });
+        }
+    }
+
     if (walletConnection.isSignedIn()) {
         await audioChat.join(walletConnection.getAccountId());
     }
