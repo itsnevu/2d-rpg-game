@@ -647,6 +647,243 @@
         text-align: center;
         min-width: 80px;
       }
+      .run-panel {
+        margin-top: 10px;
+        background: linear-gradient(145deg, #f0e6b5, #e0d5a3);
+        border: 3px solid #5c3a21;
+        padding: 10px 12px;
+        box-shadow: 0 3px 0 #8b6e4e;
+        min-width: 220px;
+        pointer-events: auto;
+      }
+      .run-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 13px;
+        color: #5c3a21;
+        line-height: 1.45;
+      }
+      .run-row span:last-child {
+        color: #2b1b12;
+        text-align: right;
+      }
+      .wave-progress {
+        width: 100%;
+        height: 9px;
+        margin: 8px 0 4px;
+        background: #3a2211;
+        border: 2px solid #5c3a21;
+        overflow: hidden;
+      }
+      .wave-progress-fill {
+        height: 100%;
+        width: 0%;
+        background: linear-gradient(90deg, #86be52, #c8a23c);
+        transition: width 0.2s ease;
+      }
+      .bar-fill.shield {
+        background: linear-gradient(90deg, #1976d2, #9bdbff);
+      }
+      /* Live co-op scoreboard (top-right) — players currently in the world */
+      .coop-scoreboard {
+        position: fixed;
+        top: 64px;
+        right: 14px;
+        z-index: 1000;
+        width: 210px;
+        background: linear-gradient(145deg, #f0e6b5, #e0d5a3);
+        border: 3px solid #5c3a21;
+        box-shadow: 0 4px 0 #8b6e4e;
+        padding: 8px 10px;
+        pointer-events: none;
+      }
+      .coop-title {
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 12px;
+        color: #5c3a21;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 6px;
+        border-bottom: 2px solid rgba(92, 58, 33, 0.4);
+        padding-bottom: 4px;
+      }
+      .coop-online {
+        background: #5c3a21;
+        color: #f0e6b5;
+        border-radius: 2px;
+        padding: 1px 6px;
+        font-size: 11px;
+      }
+      .coop-row {
+        display: grid;
+        grid-template-columns: 18px 1fr auto auto;
+        gap: 6px;
+        align-items: center;
+        font-family: 'PixelOperatorMono', monospace;
+        font-size: 12px;
+        color: #5c3a21;
+        line-height: 1.6;
+      }
+      .coop-row.you { color: #2b1b12; font-family: 'PixelOperatorMono-Bold', monospace; }
+      .coop-row.dead { opacity: 0.45; text-decoration: line-through; }
+      .coop-rank { color: #8b6e4e; text-align: center; }
+      .coop-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .coop-wave { color: #866043; font-size: 11px; }
+      .coop-score { text-align: right; color: #2b1b12; }
+      @media (max-width: 680px) {
+        .coop-scoreboard { width: 150px; top: 56px; right: 8px; padding: 6px 8px; }
+        .coop-row, .coop-title { font-size: 11px; }
+      }
+      .season-leaderboard-rows {
+        display: grid;
+        gap: 3px;
+        margin-top: 6px;
+        font-family: 'PixelOperatorMono', monospace;
+        font-size: 12px;
+        color: #5c3a21;
+      }
+      .season-leaderboard-rows .lb-you {
+        color: #2b1b12;
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        background: rgba(200, 162, 60, 0.18);
+        padding: 1px 4px;
+      }
+
+      .boss-panel {
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1000;
+        width: min(520px, calc(100vw - 40px));
+        background: linear-gradient(145deg, #2b1b12, #5c231f);
+        border: 3px solid #c8a23c;
+        padding: 10px 14px;
+        box-shadow: 0 4px 0 rgba(43, 27, 18, 0.85);
+        pointer-events: none;
+      }
+      .boss-name {
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 15px;
+        color: #f0e6b5;
+        margin-bottom: 6px;
+        text-align: center;
+      }
+      .boss-bar {
+        height: 15px;
+        background: #1c0f0b;
+        border: 2px solid #f0e6b5;
+        overflow: hidden;
+      }
+      .boss-bar-fill {
+        height: 100%;
+        width: 100%;
+        background: linear-gradient(90deg, #c62828, #ff7043);
+        transition: width 0.2s ease;
+      }
+      .run-result-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 9000;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(15, 8, 3, 0.72);
+        pointer-events: auto;
+      }
+      .run-result-card {
+        width: min(560px, calc(100vw - 32px));
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+        background: linear-gradient(145deg, #f0e6b5, #e0d5a3);
+        border: 4px solid #5c3a21;
+        box-shadow: 0 10px 0 #8b6e4e, 0 18px 28px rgba(0,0,0,0.35);
+        padding: 24px;
+        box-sizing: border-box;
+      }
+      .run-result-card h2 {
+        font-family: 'KiwiSoda', sans-serif;
+        font-size: 42px;
+        color: #5c3a21;
+        margin: 0 0 12px;
+        text-align: center;
+      }
+      .result-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .result-stat,
+      .season-preview {
+        background: rgba(92, 58, 33, 0.10);
+        border: 2px solid rgba(92, 58, 33, 0.55);
+        padding: 10px;
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 13px;
+        color: #5c3a21;
+      }
+      .result-stat strong,
+      .season-preview strong {
+        display: block;
+        color: #2b1b12;
+        font-size: 17px;
+        margin-top: 4px;
+      }
+      .leaderboard-preview {
+        display: grid;
+        gap: 5px;
+        margin-top: 8px;
+        font-family: 'PixelOperatorMono', monospace;
+        font-size: 12px;
+        color: #5c3a21;
+      }
+      .result-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .result-button {
+        flex: 1;
+        background: linear-gradient(135deg, #a77d54, #866043);
+        color: #ffffff;
+        border: 3px solid #5c3a21;
+        padding: 12px;
+        font-family: 'PixelOperatorMono-Bold', monospace;
+        font-size: 15px;
+        cursor: pointer;
+      }
+      .result-button.secondary {
+        background: linear-gradient(135deg, #6f7f54, #50633c);
+      }
+      @media (max-width: 680px) {
+        .hud-container {
+          top: 10px;
+          left: 10px;
+        }
+        .run-panel,
+        .status-panel {
+          min-width: 170px;
+        }
+        .run-row,
+        .bar-label {
+          font-size: 11px;
+        }
+        .status-bar {
+          width: 90px;
+        }
+        .result-grid {
+          grid-template-columns: 1fr;
+        }
+        .result-actions {
+          flex-direction: column;
+        }
+      }
 
       /* Hotbar styles */
       .hotbar-container {
@@ -1353,6 +1590,33 @@
       <div class="time-panel">
         <span id="time-display">DAY</span>
       </div>
+
+      <div class="run-panel">
+        <div class="run-row"><span>SCORE</span><span id="score-value">0</span></div>
+        <div class="run-row"><span>COIN</span><span id="coin-value">0</span></div>
+        <div class="run-row"><span>WAVE</span><span id="wave-value">1/5</span></div>
+        <div class="wave-progress"><div id="wave-progress-bar" class="wave-progress-fill"></div></div>
+        <div class="run-row"><span>TIMER</span><span id="wave-timer-value">3:00</span></div>
+        <div class="run-row"><span>ENEMY</span><span id="enemy-remaining-value">0</span></div>
+        <div class="run-row"><span>SURVIVED</span><span id="survival-time-value">0:00</span></div>
+        <div class="run-row"><span>SHIELD</span><span id="shield-value">0</span></div>
+        <div class="status-bar" style="width:100%; margin-top:6px;"><div id="shield-bar" class="bar-fill shield" style="width: 0%;"></div></div>
+        <div class="run-row" style="margin-top:6px;"><span>BUFFS</span><span id="active-buffs-value">None</span></div>
+      </div>
+    </div>
+
+    <div id="boss-panel" class="boss-panel" style="display: none;">
+      <div id="boss-name-value" class="boss-name">Season Warlord</div>
+      <div class="boss-bar"><div id="boss-hp-bar" class="boss-bar-fill"></div></div>
+    </div>
+
+    <!-- Live co-op scoreboard: every player currently in the shared world -->
+    <div id="coop-scoreboard" class="coop-scoreboard" style="display: none;">
+      <div class="coop-title">
+        <span>Players Online</span>
+        <span class="coop-online"><span id="coop-count">1</span></span>
+      </div>
+      <div id="coop-list"></div>
     </div>
 
     <!-- Hotbar Overlay -->
@@ -1381,6 +1645,33 @@
         <span class="slot-num">5</span>
         <span class="slot-icon">🪵</span>
         <span class="slot-label" id="wood-count">CAMPFIRE (3)</span>
+      </div>
+    </div>
+
+    <div id="run-result-overlay" class="run-result-overlay" style="display: none;">
+      <div class="run-result-card">
+        <h2 id="run-result-title">Game Over</h2>
+        <div class="result-grid">
+          <div class="result-stat">Final Score<strong id="final-score-value">0</strong></div>
+          <div class="result-stat">Wave Reached<strong id="final-wave-value">1</strong></div>
+          <div class="result-stat">Monsters Killed<strong id="final-kills-value">0</strong></div>
+          <div class="result-stat">Coins Collected<strong id="final-coins-value">0</strong></div>
+        </div>
+        <div class="season-preview">
+          Season <strong id="season-id-value">season-alpha-001</strong>
+          <div class="leaderboard-preview">
+            <span>Reward pool: <b id="reward-pool-value">125,000 coin</b></span>
+            <span>Your rank: <b id="player-rank-value">#18</b></span>
+            <span>Estimated reward: <b id="estimated-reward-value">420 coin</b></span>
+            <span>Rank 1: 25%, Rank 2: 15%, Rank 3: 10%, Rank 4-10: 25%, Rank 11-100: 25%</span>
+          </div>
+          <div id="season-leaderboard-rows" class="season-leaderboard-rows"></div>
+        </div>
+        <div class="result-actions">
+          <button class="result-button" onclick="window.submitSurvivalScore && window.submitSurvivalScore()">Submit Score</button>
+          <button class="result-button secondary" onclick="window.restartSurvivalRun && window.restartSurvivalRun()">Restart Run</button>
+        </div>
+        <div class="leaderboard-preview">Submit status: <b id="submit-status-value">Ready</b></div>
       </div>
     </div>
 

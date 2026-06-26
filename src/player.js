@@ -204,9 +204,14 @@ export class Player extends Phaser.GameObjects.Container {
         this.isSpectator = isSpectator;
         this.controlledByUser = controlledByUser;
         this.playerSprites = playerSprites;
+        this.nameText = nameText;
+        this.accountId = accountId;
 
         if (controlledByUser && !isSpectator) {
+            this.maxHp = 100;
             this.hp = 100;
+            this.shield = 0;
+            this.speedMultiplier = 1;
             this.hunger = 100;
             this.thirst = 100;
             this.warmth = 100;
@@ -273,6 +278,15 @@ export class Player extends Phaser.GameObjects.Container {
         return this.playerSprites.map(sprite => sprite.texture.key);
     }
 
+    // Update the floating name label, e.g. when a remote peer's Solana nickname
+    // arrives after the player object was first created from a location ping.
+    setDisplayName(name) {
+        if (this.isSpectator || !name || !this.nameText) return;
+        if (this.nameText.text !== name) {
+            this.nameText.setText(name);
+        }
+    }
+
     preloadLayers(layers) {
         const scene = this.scene;
         for (let layer of layers) {
@@ -308,8 +322,12 @@ export class Player extends Phaser.GameObjects.Container {
         }
     }
 
-    updateFromRemote({ x, y, layers, frame, animName, animProgress }) {
+    updateFromRemote({ x, y, layers, frame, animName, animProgress, displayName }) {
         this.targetPosition = { x, y };
+
+        if (displayName) {
+            this.setDisplayName(displayName);
+        }
 
         if (this.isSpectator) return;
 
@@ -388,18 +406,22 @@ export class Player extends Phaser.GameObjects.Container {
         if (this.controlledByUser) {
             const hud = document.getElementById('survival-hud');
             const hotbar = document.getElementById('hotbar-container');
-            if (this.isSpectator) {
+            if (this.isSpectator || !window.gameStarted) {
+                // Hidden on the landing/character-select menu and for spectators.
                 if (hud) hud.style.display = 'none';
                 if (hotbar) hotbar.style.display = 'none';
+                const coop = document.getElementById('coop-scoreboard');
+                if (coop && this.isSpectator) coop.style.display = 'none';
             } else {
                 if (hud && hud.style.display === 'none') hud.style.display = 'block';
                 if (hotbar && hotbar.style.display === 'none') hotbar.style.display = 'flex';
             }
         }
 
-        if (this.controlledByUser && !this.isSpectator) {
+        if (this.controlledByUser && !this.isSpectator && window.gameStarted) {
             const now = this.scene.time.now;
-            const elapsedSeconds = (now - (this.lastSurvivalTick || now)) / 1000;
+            // Clamp so time spent on the menu (or a tab hitch) can't dump stats at once.
+            const elapsedSeconds = Math.min(0.5, (now - (this.lastSurvivalTick || now)) / 1000);
             this.lastSurvivalTick = now;
 
             // Decay stats
@@ -445,15 +467,9 @@ export class Player extends Phaser.GameObjects.Container {
             if (warmthBar) warmthBar.style.width = `${this.warmth}%`;
 
             if (this.hp <= 0) {
-                if (window.showNotification) {
-                    window.showNotification("YOU DIED! Respawning...", "error");
+                if (this.scene.handlePlayerDeath) {
+                    this.scene.handlePlayerDeath();
                 }
-                this.hp = 100;
-                this.hunger = 100;
-                this.thirst = 100;
-                this.warmth = 100;
-                this.x = 400;
-                this.y = 300;
             }
         }
 
@@ -463,7 +479,8 @@ export class Player extends Phaser.GameObjects.Container {
         const prevVelocity = this.body.velocity.clone();
         this.body.setVelocity(0);
 
-        const speed = this.isSpectator ? 800 * PLAYER_SPEED : 500 * PLAYER_SPEED;
+        const speedMultiplier = this.isSpectator ? 1 : (this.speedMultiplier || 1);
+        const speed = (this.isSpectator ? 800 * PLAYER_SPEED : 500 * PLAYER_SPEED) * speedMultiplier;
 
         if (uiScene.joystick) {
             this.body.setVelocityX(uiScene.joystick.forceX / uiScene.joystick.radius * speed);

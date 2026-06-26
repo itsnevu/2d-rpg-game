@@ -23,6 +23,19 @@ const lastSeenNonce = {};
 let lastSendTime;
 let lastLocationData;
 
+// Nonces let receivers drop out-of-order/duplicate messages. Each (account,
+// channel) pair gets its own strictly-increasing counter so that interleaving
+// location and survival traffic never makes one stream evict the other (they
+// can arrive reordered via multi-hop gossip relay).
+const lastNonceByType = {};
+function nextNonce(type = 'location') {
+    const now = Date.now();
+    const last = lastNonceByType[type] || 0;
+    const next = now > last ? now : last + 1;
+    lastNonceByType[type] = next;
+    return next;
+}
+
 export async function connectP2P({ account }) {
     let { accountId, connection: { signer, provider, networkId } } = account;
 
@@ -139,11 +152,12 @@ export async function connectP2P({ account }) {
                 return;
             }
 
-            if (lastSeenNonce[message.accountId] && lastSeenNonce[message.accountId] >= message.nonce) {
+            const nonceKey = `${message.accountId}::${message.type || 'location'}`;
+            if (lastSeenNonce[nonceKey] && lastSeenNonce[nonceKey] >= message.nonce) {
                 // console.debug('Skipping message', message, 'because old nonce');
                 return;
             }
-            lastSeenNonce[message.accountId] = message.nonce;
+            lastSeenNonce[nonceKey] = message.nonce;
             for (let locationListener of locationListeners) {
                 locationListener(message);
             }
@@ -158,7 +172,7 @@ export async function connectP2P({ account }) {
         // console.debug('send', message);
         const encodedMessage = Buffer.from(JSON.stringify({
             accountId,
-            nonce: Date.now(),
+            nonce: nextNonce(message.type || 'location'),
             ...message
         }));
         const { publicKey, signature } = await signer.signMessage(encodedMessage, accountId, networkId);
@@ -174,6 +188,8 @@ export async function connectP2P({ account }) {
 
     return {
         swarm,
+        // All verified peer messages flow through these listeners. Consumers
+        // dispatch on `message.type` ('location', 'survival', ...).
         subscribeToLocation(locationListener) {
             locationListeners.push(locationListener);
         },
@@ -183,8 +199,13 @@ export async function connectP2P({ account }) {
             if (updatedLocationData || !lastSendTime || lastSendTime < Date.now() - MAX_SEND_PAUSE_MS) {
                 lastSendTime = Date.now();
                 lastLocationData = locationData;
-                send(locationData);
+                send({ type: 'location', ...locationData });
             }
+        },
+        // Generic typed broadcast for non-location game state (co-op presence,
+        // score submissions, ...). Throttling is the caller's responsibility.
+        publish(message) {
+            send(message);
         }
     }
 }

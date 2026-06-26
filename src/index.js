@@ -30,10 +30,13 @@ import { connectP2P } from './p2p'
 import { connectNear, CONTRACT_NAME } from './near'
 import * as audioChat from './audio-chat'
 import { debounce } from './utils';
-import { connectSolana, getSolanaPubkey, disconnectSolana, getSolanaUsername, setSolanaUsername } from './solana';
+import { connectSolana, getSolanaPubkey, disconnectSolana, getSolanaUsername, setSolanaUsername,
+    eagerConnectSolana, getSolanaDisplayName, isPhantomInstalled, getInstallUrl, shortenPubkey, SOLANA_NETWORK } from './solana';
 
 import { Player, UPDATE_DELTA } from './player'
 import { UIScene } from './ui';
+import { SurvivalSystem } from './survival-system';
+import { SurvivalNet } from './survival-net';
 
 const SET_TILE_GAS = 120 * 1000 * 1000 * 1000 * 1000;
 const SET_TILE_BATCH_SIZE = 10;
@@ -42,10 +45,51 @@ const DEBUG = false;
 const WEB4_URL = process.env.WEB4_URL || 'https://lands.near.page';
 const contractPath = WEB4_URL.includes('.near.page') ? '' : `/web4/contract/${CONTRACT_NAME}`;
 
-const connectPromise = connectNear();
+const NETWORK_TIMEOUT_MS = 4500;
+
+function withTimeout(promise, ms, label) {
+    return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error(`${label} timed out`)), ms))
+    ]);
+}
+
+function createOfflineConnection(reason) {
+    console.warn('Starting in offline mode:', reason);
+    const account = {
+        accountId: 'offline',
+        connection: {
+            signer: {
+                signMessage: async () => ({ publicKey: { data: new Uint8Array(32) }, signature: new Uint8Array(64) }),
+                keyStore: {
+                    getKey: async () => null,
+                    setKey: async () => {},
+                },
+            },
+            provider: { query: async () => null },
+            networkId: 'offline',
+        },
+    };
+    const contract = {
+        account,
+        offline: true,
+        setTiles: async () => {
+            console.info('Offline mode: skipped setTiles');
+        },
+    };
+    const result = { near: null, walletConnection: null, account, contract, offline: true };
+    Object.assign(window, result);
+    return result;
+}
+
+const connectPromise = withTimeout(connectNear(), NETWORK_TIMEOUT_MS, 'NEAR connection')
+    .catch(e => createOfflineConnection(e && e.message ? e.message : e));
 
 const accountIdToPlayer = {};
 window.isSpectator = false;
+// The survival run only ticks once the player leaves the landing/character-select
+// menu, so waves/notifications don't fire behind the menu overlay.
+window.gameStarted = false;
 
 window.showNotification = function(message, type = 'info') {
     const container = document.getElementById('notification-container');
@@ -63,6 +107,20 @@ window.showNotification = function(message, type = 'info') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 };
+
+// Human-readable name for the local player, shared with peers over P2P.
+// Solana nickname > shortened pubkey > shortened guest id.
+function localDisplayName(accountId) {
+    const solanaName = getSolanaDisplayName();
+    if (solanaName) return solanaName;
+    if (accountId && accountId.startsWith('guest:')) {
+        return `guest:${accountId.split(':')[1].substring(0, 6)}`;
+    }
+    return accountId || 'Player';
+}
+
+// Set once P2P connects so the survival co-op layer can broadcast presence.
+window.publishSurvival = null;
 
 // Prevent Phaser from stealing keyboard focus from HTML input elements
 document.addEventListener('focusin', (e) => {
@@ -85,6 +143,18 @@ document.addEventListener('focusout', (e) => {
         } catch (err) {}
     }
 });
+
+// Leave the landing/character-select menu and actually begin the survival run.
+function enterGame() {
+    const landing = document.getElementById('landing-screen');
+    if (landing) landing.classList.add('fade-out');
+    window.gameStarted = true;
+    const scene = window.game && window.game.scene.getScene('GameScene');
+    if (scene && scene.survivalSystem && !window.isSpectator) {
+        scene.survivalSystem.start();
+    }
+}
+window.enterGame = enterGame;
 
 async function login() {
     try {
@@ -123,6 +193,9 @@ async function loadParcels() {
     try {
         parcelsLoading = true;
         const { contract } = await connectPromise;
+        if (contract.offline || window.offline) {
+            return;
+        }
 
         const scene = game.scene.getScene('GameScene');
         const { scrollX, scrollY, displayWidth, displayHeight } = scene.cameras.main;
@@ -253,6 +326,11 @@ async function loadChunksIfNeeded() {
             if ((nonce == null || nonce < nonceMap[i][j]) && !loading) {
                 console.debug('nonce mismatch for chunk', i, j, nonce, nonceMap[i][j], );
                 fullMap[i][j] = { ...fullMap[i][j], loading: true };
+                if (contract.offline || window.offline) {
+                    fullMap[i][j] = { ...generateFallbackChunk(i, j, scene), loading: false };
+                    updateChunk(i, j);
+                    continue;
+                }
                 // NOTE: no await on purpose
                 await sendJson('GET', `${WEB4_URL}${contractPath}/getChunk?x.json=${i}&y.json=${j}`)
                     .then(chunk => {
@@ -493,6 +571,7 @@ class GameScene extends Phaser.Scene
         const solanaPubkey = getSolanaPubkey();
         const solanaUsername = getSolanaUsername();
         const activeAccountId = solanaUsername || solanaPubkey || (window.account && window.account.accountId) || ('guest:' + Math.random().toString(36).substring(2, 8));
+        this.activeAccountId = activeAccountId;
         
         let characterLayers = undefined;
         if (solanaPubkey) {
@@ -539,13 +618,19 @@ class GameScene extends Phaser.Scene
                 });
             });
             
-            this.monstersGroup = this.physics.add.group();
-            for (let i = 0; i < 4; i++) {
-                this.spawnMonster(Math.random() * 800 + 200, Math.random() * 600 + 200);
-            }
-            
-            this.physics.add.collider(this.monstersGroup, this.mainLayer);
-            this.physics.add.collider(this.monstersGroup, this.autotileLayer);
+            this.survivalSystem = new SurvivalSystem(this);
+            this.survivalSystem.create();
+            // Co-op multiplayer presence/leaderboard layer (shared world).
+            this.survivalNet = new SurvivalNet(this, { localDisplayName: localDisplayName(activeAccountId) });
+            this.survivalSystem.net = this.survivalNet;
+            window.submitSurvivalScore = () => this.survivalSystem && this.survivalSystem.mockSubmitScore();
+            window.restartSurvivalRun = () => window.location.reload();
+
+            this.input.on('pointerdown', pointer => {
+                if (pointer.leftButtonDown() && this.gameMode === 'walk' && window.activeHotbarItem === 'sword') {
+                    this.performAttack();
+                }
+            });
         }
 
         this.selectInventoryTiles(this.desertTiles);
@@ -605,7 +690,7 @@ class GameScene extends Phaser.Scene
 
     get gameMode() {
         const uiScene = game.scene.getScene('UIScene');
-        const mode = uiScene.modeButtons.value;
+        const mode = uiScene && uiScene.modeButtons ? uiScene.modeButtons.value : 'walk';
         return mode;
     }
 
@@ -708,19 +793,9 @@ class GameScene extends Phaser.Scene
                 this.useActiveItem();
             }
 
-            if (this.monstersGroup) {
-                this.monstersGroup.getChildren().forEach(monster => {
-                    const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, monster.x, monster.y);
-                    if (dist < 30) {
-                        const now = this.time.now;
-                        if (!monster.lastHitTime || now - monster.lastHitTime > 1000) {
-                            monster.lastHitTime = now;
-                            this.player.hp = Math.max(0, this.player.hp - 15);
-                            const angle = Phaser.Math.Angle.Between(monster.x, monster.y, this.player.x, this.player.y);
-                            this.player.body.setVelocity(Math.cos(angle) * 200, Math.sin(angle) * 200);
-                        }
-                    }
-                });
+            if (window.gameStarted) {
+                if (this.survivalSystem) this.survivalSystem.update(time, delta);
+                if (this.survivalNet) this.survivalNet.update(time);
             }
         }
 
@@ -1006,7 +1081,16 @@ class GameScene extends Phaser.Scene
         }
     }
 
+    handlePlayerDeath() {
+        if (this.survivalSystem) {
+            this.survivalSystem.finishRun('gameover');
+        }
+    }
+
     spawnMonster(x, y) {
+        if (this.survivalSystem) {
+            return this.survivalSystem.spawnMonster('slime');
+        }
         const monster = this.physics.add.sprite(x, y, 'skeleton');
         monster.setCollideWorldBounds(true);
         monster.hp = 50;
@@ -1028,6 +1112,10 @@ class GameScene extends Phaser.Scene
     }
 
     performAttack() {
+        if (this.survivalSystem) {
+            this.survivalSystem.performAttack();
+            return;
+        }
         const slash = this.add.graphics();
         slash.fillStyle(0xffffff, 0.8);
         slash.slice(this.player.x, this.player.y, 40, 0, Math.PI * 2);
@@ -1120,9 +1208,23 @@ function updatePutTileQueue() {
     }
 }
 
-async function onLocationUpdate({ accountId, x, y, frame, animName, animProgress, layers }) {
+async function onLocationUpdate(message) {
+    // Route co-op survival presence/score messages to the survival net layer.
+    if (message && message.type === 'survival') {
+        const scene = game.scene.getScene('GameScene');
+        if (scene && scene.survivalNet) {
+            scene.survivalNet.handleMessage(message);
+        }
+        return;
+    }
+
+    const { accountId, x, y, frame, animName, animProgress, layers, displayName } = message;
     const activeAccountId = getSolanaUsername() || getSolanaPubkey() || (window.account && window.account.accountId);
     if (accountId && accountId == activeAccountId) {
+        return;
+    }
+    // Position is required to place/move a remote player; skip malformed pings.
+    if (typeof x !== 'number' || typeof y !== 'number') {
         return;
     }
 
@@ -1131,14 +1233,21 @@ async function onLocationUpdate({ accountId, x, y, frame, animName, animProgress
         accountIdToPlayer[accountId] = scene.add.player({ scene, x, y, accountId, layers });
     }
     const player = accountIdToPlayer[accountId];
-    player.updateFromRemote({ x, y, layers, frame, animName, animProgress });
+    player.updateFromRemote({ x, y, layers, frame, animName, animProgress, displayName });
 }
 
 let p2pPromise
 async function connectP2PIfNeeded() {
-    const { contract } = await connectPromise;
+    const { contract, offline } = await connectPromise;
+    if (offline || contract.offline) {
+        return null;
+    }
     if (!p2pPromise) {
-        p2pPromise = connectP2P({ account: contract.account });
+        p2pPromise = withTimeout(connectP2P({ account: contract.account }), NETWORK_TIMEOUT_MS, 'P2P connection')
+            .catch(e => {
+                console.warn('P2P disabled:', e);
+                return null;
+            });
     }
     return await p2pPromise;
 }
@@ -1146,10 +1255,18 @@ async function connectP2PIfNeeded() {
 async function publishLocation() {
     try {
         const p2p = await connectP2PIfNeeded();
+        if (!p2p) {
+            return;
+        }
 
         const scene = game.scene.getScene('GameScene');
         if (!scene || !scene.player) {
             return;
+        }
+
+        // Expose the generic survival broadcast now that P2P is available.
+        if (!window.publishSurvival) {
+            window.publishSurvival = (message) => p2p.publish(message);
         }
 
         const { x, y, playerSprites } = scene.player;
@@ -1162,7 +1279,8 @@ async function publishLocation() {
             animName: anims.isPlaying && anims.getName().replace(/:.+$/, ''),
             animProgress: anims.getProgress(),
             // TODO: Throttle layers transmission to save bandwidth?
-            layers
+            layers,
+            displayName: localDisplayName(scene.activeAccountId)
         });
     } finally {
         setTimeout(publishLocation, UPDATE_DELTA);
@@ -1171,16 +1289,13 @@ async function publishLocation() {
 publishLocation();
 
 (async () => {
-    const p2p = await connectP2PIfNeeded();
-    if (!p2p) {
-        console.error("Couldn't subscribe to location updates");
-        return;
-    }
-    p2p.subscribeToLocation(onLocationUpdate);
+    // Silently re-establish a trusted Phantom session for returning users and
+    // bind disconnect/accountChanged handlers. Never shows a popup.
+    await eagerConnectSolana().catch(e => console.debug('Eager connect skipped:', e && e.message));
 
     const solanaPubkey = getSolanaPubkey();
     const solanaUsername = getSolanaUsername();
-    
+
     // Setup landing page UI with wallet connection state
     const authSection = document.getElementById('auth-section');
     if (authSection) {
@@ -1191,9 +1306,8 @@ publishLocation();
                 // Wallet connected but no username set yet
                 authSection.innerHTML = `
                     <div class="account-info" style="margin-bottom:15px;">Connected: <strong>${shortPubkey}</strong></div>
-                    <input type="text" id="username-input" placeholder="ENTER NICKNAME" class="menu-input" maxlength="15">
-                    
-                    <div style="font-family: 'PixelOperatorMono-Bold', monospace; color: #5c3a21; margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">Choose Character</div>
+
+                    <div style="font-family: 'PixelOperatorMono-Bold', monospace; color: #5c3a21; margin-bottom: 10px; font-size: 14px; text-transform: uppercase;">1. Choose Character</div>
                     <div class="character-grid">
                         <div class="char-option active" data-char="adventurer">
                             <div class="char-preview">
@@ -1228,7 +1342,10 @@ publishLocation();
                             SKELETON
                         </div>
                     </div>
-                    
+
+                    <div style="font-family: 'PixelOperatorMono-Bold', monospace; color: #5c3a21; margin: 4px 0 10px; font-size: 14px; text-transform: uppercase;">2. Enter Nickname</div>
+                    <input type="text" id="username-input" placeholder="ENTER NICKNAME" class="menu-input" maxlength="15">
+
                     <button class="menu-button" id="btn-save-username">SAVE &amp; ENTER</button>
                     <button class="menu-button secondary" id="btn-logout">LOGOUT</button>
                 `;
@@ -1299,22 +1416,35 @@ publishLocation();
                     <button class="menu-button secondary" id="btn-logout">LOGOUT</button>
                 `;
                 document.getElementById('btn-play').addEventListener('click', () => {
-                    document.getElementById('landing-screen').classList.add('fade-out');
+                    enterGame();
                 });
                 document.getElementById('btn-logout').addEventListener('click', () => {
                     logout();
                 });
             }
         } else {
+            const phantomReady = isPhantomInstalled();
             authSection.innerHTML = `
-                <button class="menu-button" id="btn-login">LOGIN WITH SOLANA</button>
+                <button class="menu-button" id="btn-login">${phantomReady ? 'LOGIN WITH PHANTOM' : 'INSTALL PHANTOM WALLET'}</button>
+                <div style="font-family: 'PixelOperatorMono', monospace; color: #8b6e4e; font-size: 12px; margin: -6px 0 14px;">Solana ${SOLANA_NETWORK} &middot; your wallet is your identity</div>
+                <button class="menu-button" id="btn-guest">ENTER AS GUEST</button>
                 <button class="menu-button secondary" id="btn-spectate">SPECTATE GAME</button>
             `;
             document.getElementById('btn-login').addEventListener('click', () => {
+                if (!isPhantomInstalled()) {
+                    window.open(getInstallUrl(), '_blank', 'noopener');
+                    window.showNotification && window.showNotification('Install Phantom, then reload to log in.', 'info');
+                    return;
+                }
                 login();
+            });
+            document.getElementById('btn-guest').addEventListener('click', () => {
+                enterGame();
+                window.showNotification && window.showNotification('Playing as guest', 'success');
             });
             document.getElementById('btn-spectate').addEventListener('click', () => {
                 window.isSpectator = true;
+                window.gameStarted = true;
                 const gameScene = game.scene.getScene('GameScene');
                 if (gameScene) {
                     if (gameScene.player) {
@@ -1342,8 +1472,18 @@ publishLocation();
     }
 
     if (solanaPubkey) {
-        await audioChat.join(solanaPubkey);
+        audioChat.join(solanaPubkey).catch(e => console.warn('Audio chat disabled:', e));
     }
+
+    connectP2PIfNeeded()
+        .then(p2p => {
+            if (!p2p) {
+                console.warn("P2P location sync unavailable; continuing offline");
+                return;
+            }
+            p2p.subscribeToLocation(onLocationUpdate);
+        })
+        .catch(e => console.warn("Couldn't subscribe to location updates", e));
 })().catch(console.error);
 
 Object.assign(window, { login, logout, game, onLocationUpdate, publishLocation });

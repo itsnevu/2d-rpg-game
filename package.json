@@ -4,7 +4,7 @@
   "description": "NEAR Lands",
   "scripts": {
     "prebuild": "rm -rf dist/* .parcel-cache",
-    "build": "parcel build index.html --dist-dir dist/",
+    "build": "parcel build index.html --dist-dir dist/ --no-source-maps",
     "postbuild": "cp -R static/* dist/",
     "start": "NODE_ENV=production parcel index.html",
     "build:contract": "cd contract && npm run build:release",
