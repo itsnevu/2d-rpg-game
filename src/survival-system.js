@@ -89,7 +89,7 @@ export class SurvivalSystem {
         const player = this.scene.player;
         this.knifeRestAngle = -0.5;       // resting: blade angled up-forward
         this.knifeSwinging = false;
-        this.knife = this.scene.add.sprite(player.x, player.y, 'weapon-knife');
+        this.knife = this.scene.add.sprite(player.x, player.y, 'weapon-machete');
         this.knife.setOrigin(0.2, 0.5);   // pivot near the grip/hand
         this.knife.setScale(0.8);
         this.knife.setDepth(player.y + 5);
@@ -148,7 +148,7 @@ export class SurvivalSystem {
         });
 
         // Player weapon (carries its own width/height).
-        addArtTexture(this.scene, 'weapon-knife');
+        // Using real asset now instead of addArtTexture(this.scene, 'weapon-knife');
 
         // Item drops: coin / potion / chest get art, the rest stay as icons.
         ['coin', 'health_potion', 'rare_chest'].forEach(id => addArtTexture(this.scene, `drop-${id}`, 30, 30));
@@ -240,6 +240,8 @@ export class SurvivalSystem {
         };
         const pos = this.getSpawnPosition(forceNearPlayer);
         const monster = this.scene.physics.add.sprite(pos.x, pos.y, config.assetKey);
+        // Scale visual sprite but keep physics radius
+        monster.setDisplaySize(config.radius * 2.5, config.radius * 2.5);
         monster.config = config;
         monster.hp = config.hp;
         monster.maxHp = config.maxHp;
@@ -476,6 +478,7 @@ export class SurvivalSystem {
             if (Math.random() > drop.dropChance) return;
             const amount = Phaser.Math.Between(drop.minAmount, drop.maxAmount);
             const item = this.drops.create(x + Phaser.Math.Between(-18, 18), y + Phaser.Math.Between(-18, 18), `drop-${drop.itemId}`);
+            item.setDisplaySize(24, 24);
             item.itemId = drop.itemId;
             item.amount = amount;
             item.rarity = drop.rarity;

@@ -18,6 +18,20 @@ import beachTilesImg from 'url:~src/assets/asset/tiles/new/beach.png';
 import riverbankTilesImg from 'url:~src/assets/asset/tiles/new/riverbank.png';
 import gamepadSpritesheet from 'url:~src/assets/gamepad/gamepad_spritesheet.png'
 import princessSpritesheet from 'url:~src/assets/princess.png'
+import weaponMacheteImg from 'url:~src/assets/asset/items/combat_machete.png';
+
+// Monster assets
+import monsterSlimeImg from 'url:~src/assets/asset/vole_walking_release.png';
+import monsterRaiderImg from 'url:~src/assets/asset/fox_walking_release.png';
+import monsterBruteImg from 'url:~src/assets/asset/walrus_walking_release.png';
+import monsterRangedImg from 'url:~src/assets/asset/jellyfish_walking_release.png';
+import monsterEliteImg from 'url:~src/assets/asset/polar_bear_walking_release.png';
+import monsterBossImg from 'url:~src/assets/asset/wolverine_walking_release.png';
+
+// Drop assets
+import dropCoinImg from 'url:~src/assets/asset/items/pearl.png';
+import dropPotionImg from 'url:~src/assets/asset/items/vitamin_drink.png';
+import dropChestImg from 'url:~src/assets/asset/items/wooden_storage_box.png';
 
 import 'regenerator-runtime/runtime';
 
@@ -445,6 +459,19 @@ class GameScene extends Phaser.Scene
         this.load.spritesheet({ key: 'gamepad', url: gamepadSpritesheet, frameConfig: { frameWidth: 100, frameHeight: 100 } });
         this.load.spritesheet({ key: 'princess', url: princessSpritesheet, frameConfig: { frameWidth: 64, frameHeight: 64 }});
         this.load.spritesheet({ key: 'skeleton', url: '/lpc-character/body/male/skeleton.png', frameConfig: { frameWidth: 64, frameHeight: 64 }});
+        
+        this.load.image('weapon-machete', weaponMacheteImg);
+
+        this.load.image('monster-slime', monsterSlimeImg);
+        this.load.image('monster-raider', monsterRaiderImg);
+        this.load.image('monster-brute', monsterBruteImg);
+        this.load.image('monster-ranged', monsterRangedImg);
+        this.load.image('monster-elite', monsterEliteImg);
+        this.load.image('monster-boss-warlord', monsterBossImg);
+
+        this.load.image('drop-coin', dropCoinImg);
+        this.load.image('drop-health_potion', dropPotionImg);
+        this.load.image('drop-rare_chest', dropChestImg);
     }
 
     selectInventoryTiles(tiles, { forceUpdate } = {}) {
